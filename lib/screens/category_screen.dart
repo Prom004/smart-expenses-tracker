@@ -26,6 +26,12 @@ class CategoryScreen extends StatelessWidget {
               );
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.account_circle),
+            onPressed: () {
+              Navigator.of(context).pushNamed('/profile');
+            },
+          ),
         ],
       ),
       body: const CategoryFetcher(),

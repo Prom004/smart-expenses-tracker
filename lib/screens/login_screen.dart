@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/database_provider.dart';
-import '../models/user.dart';
 import 'signup_screen.dart';
 import '../models/theme_provider.dart';
 

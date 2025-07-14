@@ -9,6 +9,8 @@ import './screens/category_screen.dart';
 import './screens/expense_screen.dart';
 import './screens/all_expenses.dart';
 import './screens/login_screen.dart';
+import './screens/profile_screen.dart';
+import './screens/settings_screen.dart';
 
 void main() {
   // Initialize FFI for desktop platforms
@@ -46,6 +48,9 @@ class MyApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/login': (_) => const LoginScreen(),
+        '/home': (_) => const CategoryScreen(),
+        '/profile': (_) => const ProfileScreen(),
+        '/settings': (_) => const SettingsScreen(),
         CategoryScreen.name: (_) => const CategoryScreen(),
         ExpenseScreen.name: (_) => const ExpenseScreen(),
         AllExpenses.name: (_) => const AllExpenses(),
