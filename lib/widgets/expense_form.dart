@@ -1,3 +1,4 @@
+import 'package:expense_app/models/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -122,8 +123,9 @@ class _ExpenseFormState extends State<ExpenseForm> {
                     date: _date ?? DateTime.now(),
                     category: _initialValue,
                   );
+                  final userId = Provider.of<ThemeProvider>(context, listen: false).currentUser?.id ?? 0;
                   if (widget.expense == null) {
-                    provider.addExpense(file);
+                    provider.addExpense(file, userId);
                   } else {
                     provider.updateExpense(file);
                   }

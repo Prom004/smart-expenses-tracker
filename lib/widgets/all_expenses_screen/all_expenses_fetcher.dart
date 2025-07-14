@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/database_provider.dart';
+import '../../models/theme_provider.dart';
 import './all_expenses_list.dart';
 import './expense_search.dart';
 
@@ -16,7 +17,8 @@ class _AllExpensesFetcherState extends State<AllExpensesFetcher> {
 
   Future _getAllExpenses() async {
     final provider = Provider.of<DatabaseProvider>(context, listen: false);
-    return await provider.fetchAllExpenses();
+    final userId = Provider.of<ThemeProvider>(context, listen: false).currentUser?.id ?? 0;
+    return await provider.fetchAllExpenses(userId);
   }
 
   @override

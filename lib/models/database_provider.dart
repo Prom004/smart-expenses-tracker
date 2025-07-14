@@ -4,6 +4,7 @@ import 'package:path/path.dart';
 import '../constants/icons.dart';
 import './ex_category.dart';
 import './expense.dart';
+import './user.dart';
 
 class DatabaseProvider with ChangeNotifier {
   String _searchText = '';
@@ -40,8 +41,22 @@ class DatabaseProvider with ChangeNotifier {
 
     _database = await openDatabase(
       path,
-      version: 1,
+      version: 3,
       onCreate: _createDb, // will create this separately
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE $eTable ADD COLUMN user_id INTEGER');
+        }
+        if (oldVersion < 3) {
+          await db.execute('CREATE TABLE IF NOT EXISTS $uTable('
+              'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+              'username TEXT UNIQUE, '
+              'email TEXT UNIQUE, '
+              'password TEXT, '
+              'fullName TEXT, '
+              'createdAt TEXT)');
+        }
+      },
     );
 
     return _database!;
@@ -50,25 +65,40 @@ class DatabaseProvider with ChangeNotifier {
   // _createDb function
   static const cTable = 'categoryTable';
   static const eTable = 'expenseTable';
+  static const uTable = 'userTable';
+
   Future<void> _createDb(Database db, int version) async {
     // this method runs only once. when the database is being created
     // so create the tables here and if you want to insert some initial values
     // insert it in this function.
 
     await db.transaction((txn) async {
+      // user table
+      await txn.execute('''CREATE TABLE $uTable(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        email TEXT UNIQUE,
+        password TEXT,
+        fullName TEXT,
+        createdAt TEXT
+      )''');
+
       // category table
       await txn.execute('''CREATE TABLE $cTable(
         title TEXT,
         entries INTEGER,
         totalAmount TEXT
       )''');
-      // expense table
+
+      // expense table with user_id foreign key
       await txn.execute('''CREATE TABLE $eTable(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
         amount TEXT,
         date TEXT,
-        category TEXT
+        category TEXT,
+        user_id INTEGER,
+        FOREIGN KEY(user_id) REFERENCES $uTable(id)
       )''');
 
       // insert the initial categories.
@@ -133,13 +163,19 @@ class DatabaseProvider with ChangeNotifier {
   }
   // method to add an expense to database
 
-  Future<void> addExpense(Expense exp) async {
+  Future<void> addExpense(Expense exp, int userId) async {
     final db = await database;
     await db.transaction((txn) async {
       await txn
           .insert(
         eTable,
-        exp.toMap(),
+        {
+          'title': exp.title,
+          'amount': exp.amount.toString(),
+          'date': exp.date.toIso8601String(),
+          'category': exp.category,
+          'user_id': userId,
+        },
         conflictAlgorithm: ConflictAlgorithm.replace,
       )
           .then((generatedId) {
@@ -179,11 +215,11 @@ class DatabaseProvider with ChangeNotifier {
     });
   }
 
-  Future<List<Expense>> fetchExpenses(String category) async {
+  Future<List<Expense>> fetchExpenses(String category, int userId) async {
     final db = await database;
     return await db.transaction((txn) async {
       return await txn.query(eTable,
-          where: 'category == ?', whereArgs: [category]).then((data) {
+          where: 'category == ? AND user_id == ?', whereArgs: [category, userId]).then((data) {
         final converted = List<Map<String, dynamic>>.from(data);
         //
         List<Expense> nList = List.generate(
@@ -194,10 +230,11 @@ class DatabaseProvider with ChangeNotifier {
     });
   }
 
-  Future<List<Expense>> fetchAllExpenses() async {
+  Future<List<Expense>> fetchAllExpenses(int userId) async {
     final db = await database;
     return await db.transaction((txn) async {
-      return await txn.query(eTable).then((data) {
+      return await txn.query(eTable,
+          where: 'user_id == ?', whereArgs: [userId]).then((data) {
         final converted = List<Map<String, dynamic>>.from(data);
         List<Expense> nList = List.generate(
             converted.length, (index) => Expense.fromString(converted[index]));
@@ -285,5 +322,42 @@ class DatabaseProvider with ChangeNotifier {
         }
       });
     });
+  }
+
+  // User authentication
+  Future<User?> authenticateUser(String username, String password) async {
+    final db = await database;
+    final result = await db.query(
+      uTable,
+      where: 'username = ? AND password = ?',
+      whereArgs: [username, password],
+    );
+    print('authenticateUser query result: $result');
+    if (result.isNotEmpty) {
+      return User.fromMap(result.first);
+    }
+    return null;
+  }
+
+  Future<User?> getUserByUsername(String username) async {
+    final db = await database;
+    final result = await db.query(
+      uTable,
+      where: 'username = ?',
+      whereArgs: [username],
+    );
+    if (result.isNotEmpty) {
+      return User.fromMap(result.first);
+    }
+    return null;
+  }
+
+  Future<int> registerUser(User user) async {
+    final db = await database;
+    return await db.insert(
+      uTable,
+      user.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.abort,
+    );
   }
 }

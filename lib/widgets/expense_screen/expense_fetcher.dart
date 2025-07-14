@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/database_provider.dart';
+import '../../models/theme_provider.dart';
 import './expense_list.dart';
 import './expense_chart.dart';
 
@@ -17,7 +18,11 @@ class _ExpenseFetcherState extends State<ExpenseFetcher> {
   late Future _expenseList;
   Future _getExpenseList() async {
     final provider = Provider.of<DatabaseProvider>(context, listen: false);
-    return await provider.fetchExpenses(widget.category);
+    final userId = Provider.of<ThemeProvider>(context, listen: false).currentUser?.id;
+    if (userId == null) {
+      throw Exception('User not logged in');
+    }
+    return await provider.fetchExpenses(widget.category, userId);
   }
 
   @override
