@@ -11,6 +11,7 @@ import './screens/all_expenses.dart';
 import './screens/login_screen.dart';
 import './screens/profile_screen.dart';
 import './screens/settings_screen.dart';
+import './screens/monthly_report_screen.dart';  // Added import for MonthlyReportScreen
 
 void main() {
   // Initialize FFI for desktop platforms
@@ -51,6 +52,7 @@ class MyApp extends StatelessWidget {
         '/home': (_) => const CategoryScreen(),
         '/profile': (_) => const ProfileScreen(),
         '/settings': (_) => const SettingsScreen(),
+        '/monthly_report': (_) => const MonthlyReportScreen(),
         CategoryScreen.name: (_) => const CategoryScreen(),
         ExpenseScreen.name: (_) => const ExpenseScreen(),
         AllExpenses.name: (_) => const AllExpenses(),

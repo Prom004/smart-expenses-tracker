@@ -37,6 +37,13 @@ class SettingsScreen extends StatelessWidget {
             },
           ),
           ListTile(
+            leading: const Icon(Icons.calendar_today),
+            title: const Text('Generate Monthly Report'),
+            onTap: () {
+              Navigator.of(context).pushNamed('/monthly_report');
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.info),
             title: const Text('About'),
             onTap: () {

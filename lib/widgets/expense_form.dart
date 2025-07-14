@@ -2,6 +2,7 @@ import 'package:expense_app/models/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:confetti/confetti.dart';
 import '../models/database_provider.dart';
 import '../constants/icons.dart';
 import '../models/expense.dart';
@@ -20,6 +21,8 @@ class _ExpenseFormState extends State<ExpenseForm> {
   DateTime? _date;
   String _initialValue = 'Other';
 
+  late ConfettiController _confettiController;
+
   @override
   void initState() {
     super.initState();
@@ -29,6 +32,13 @@ class _ExpenseFormState extends State<ExpenseForm> {
       _date = widget.expense!.date;
       _initialValue = widget.expense!.category;
     }
+    _confettiController = ConfettiController(duration: const Duration(milliseconds: 100));
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
   }
 
   //
@@ -50,92 +60,110 @@ class _ExpenseFormState extends State<ExpenseForm> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<DatabaseProvider>(context, listen: false);
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
-      padding: const EdgeInsets.all(20.0),
-      child: SingleChildScrollView(
-        child: Column(
-          children: [
-            // title
-            TextField(
-              controller: _title,
-              decoration: const InputDecoration(
-                labelText: 'Title of expense',
-              ),
-            ),
-            const SizedBox(height: 20.0),
-            // amount
-            TextField(
-              controller: _amount,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Amount of expense',
-              ),
-            ),
-            const SizedBox(height: 20.0),
-            // date picker
-            Row(
+    return Positioned(
+      bottom: 0,
+      left: MediaQuery.of(context).size.width * 0.1,
+      child: Material(
+        elevation: 10,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.5,
+          width: MediaQuery.of(context).size.width * 0.95,
+          padding: const EdgeInsets.all(20.0),
+          decoration: BoxDecoration(
+            color: Theme.of(context).dialogBackgroundColor,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
               children: [
-                Expanded(
-                  child: Text(_date != null
-                      ? DateFormat('MMMM dd, yyyy').format(_date!)
-                      : 'Select Date'),
-                ),
-                IconButton(
-                  onPressed: () => _pickDate(),
-                  icon: const Icon(Icons.calendar_month),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20.0),
-            // category
-            Row(
-              children: [
-                const Expanded(child: Text('Category')),
-                Expanded(
-                  child: DropdownButton(
-                    items: icons.keys
-                        .map(
-                          (e) => DropdownMenuItem(
-                            value: e,
-                            child: Text(e),
-                          ),
-                        )
-                        .toList(),
-                    value: _initialValue,
-                    onChanged: (newValue) {
-                      setState(() {
-                        _initialValue = newValue!;
-                      });
-                    },
+                // title
+                TextField(
+                  controller: _title,
+                  decoration: const InputDecoration(
+                    labelText: 'Title of expense',
                   ),
                 ),
+                const SizedBox(height: 20.0),
+                // amount
+                TextField(
+                  controller: _amount,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Amount of expense',
+                  ),
+                ),
+                const SizedBox(height: 20.0),
+                // date picker
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(_date != null
+                          ? DateFormat('MMMM dd, yyyy').format(_date!)
+                          : 'Select Date'),
+                    ),
+                    IconButton(
+                      onPressed: () => _pickDate(),
+                      icon: const Icon(Icons.calendar_month),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20.0),
+                // category
+                Row(
+                  children: [
+                    const Expanded(child: Text('Category')),
+                    Expanded(
+                      child: DropdownButton(
+                        items: icons.keys
+                            .map(
+                              (e) => DropdownMenuItem(
+                                value: e,
+                                child: Text(e),
+                              ),
+                            )
+                            .toList(),
+                        value: _initialValue,
+                        onChanged: (newValue) {
+                          setState(() {
+                            _initialValue = newValue!;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20.0),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    if (_title.text != '' && _amount.text != '') {
+                      final file = Expense(
+                        id: widget.expense?.id ?? 0,
+                        title: _title.text,
+                        amount: int.parse(_amount.text),
+                        date: _date ?? DateTime.now(),
+                        category: _initialValue,
+                      );
+                      final userId = Provider.of<ThemeProvider>(context, listen: false).currentUser?.id ?? 0;
+                      if (widget.expense == null) {
+                        provider.addExpense(file, userId);
+                        _confettiController.play();
+                        await Future.delayed(const Duration(seconds: 2));
+                        if (mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      } else {
+                        provider.updateExpense(file);
+                        Navigator.of(context).pop();
+                      }
+                    }
+                  },
+                  icon: Icon(widget.expense == null ? Icons.add : Icons.edit),
+                  label: Text(widget.expense == null ? 'Add Expense' : 'Update Expense'),
+                ),
               ],
             ),
-            const SizedBox(height: 20.0),
-            ElevatedButton.icon(
-              onPressed: () {
-                if (_title.text != '' && _amount.text != '') {
-                  final file = Expense(
-                    id: widget.expense?.id ?? 0,
-                    title: _title.text,
-                    amount: int.parse(_amount.text),
-                    date: _date ?? DateTime.now(),
-                    category: _initialValue,
-                  );
-                  final userId = Provider.of<ThemeProvider>(context, listen: false).currentUser?.id ?? 0;
-                  if (widget.expense == null) {
-                    provider.addExpense(file, userId);
-                  } else {
-                    provider.updateExpense(file);
-                  }
-                  Navigator.of(context).pop();
-                }
-              },
-              icon: Icon(widget.expense == null ? Icons.add : Icons.edit),
-              label: Text(widget.expense == null ? 'Add Expense' : 'Update Expense'),
-            ),
-          ],
+          ),
         ),
       ),
     );
